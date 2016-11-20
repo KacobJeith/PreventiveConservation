@@ -37,7 +37,15 @@ function TraceSpectralPowerDistribution(instrument,output)
             end
 
         case 'asensetek'
-        
+            step = 400/258;
+            plotX = [380:step:780]';
+            alldata(:,1) = plotX;
+
+            for i=1:length(FileName)
+                imagepath = strcat(PathName,FileName{i});
+                trace = processAsensetek(imagepath);
+                alldata(:,i+1) = trace';
+            end
     end
     
     alldata = num2cell(alldata);
@@ -91,3 +99,41 @@ function trace = processOceanoptics(imagepath)
     
     trace = imadjust(trace,[min(trace);max(trace)],[0,1]);
 end
+
+function trace = processAsensetek(imagepath)
+    
+    % 380 to 780 nm
+    % 258 datapoints
+    
+    image = imread(imagepath);
+    graphCrop = imcrop(image,[32 32 258 232]);
+    r = graphCrop(:,:,1);
+    g = graphCrop(:,:,2);
+    b = graphCrop(:,:,3);
+    
+    mask = zeros([size(graphCrop,1),size(graphCrop,2)]);
+    
+    for i=1:(numel(graphCrop)/3)
+        if r(i) ~= g(i) && r(i) ~= b(i)
+            mask(i) = 1;
+        end
+        
+    end
+    
+    mask = imopen(imclose(mask,ones(2)),ones(4));
+    
+    trace = zeros(1,size(graphCrop,2));
+    for i=1:size(mask,2)
+        thiscol = mask(:,i);
+        nonzero = find(thiscol,1);
+        if isempty(nonzero)
+            trace(i) = NaN;
+        else
+            trace(i) = 1 - nonzero/size(mask,1);
+        end
+    end
+    
+end
+
+
+function traceModified = g
